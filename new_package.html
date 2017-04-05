@@ -210,76 +210,134 @@ div.tocify {
 <h2>Introduction</h2>
 <p>Here are a few notes on starting an R package. For context, I’ve previously made a <a href="https://github.com/bheavner/packageTest">skeleton package</a>. That may be worth looking at, at least because there’s some useful links in the README, but in this case, I’ll be doing things a tiny bit differently by starting with an existing R script.</p>
 <p>The current goal is to make a set of R functions to obtain gene definitions from an outside data source and make a table of those gene definitions in the GAC database. We’ll bundle those functions up as an R package so it’s easy to get them and reuse them, and I’ll put the code on github because that’s an easy way to distribute it and allow installation from any Internet-connected workstation.</p>
-<p>Coming up with a name is always a hard part - I want something that is general enough, but specific enough.. It’s hopeless. So, rather than getting too hung up on it, I’ll remember that it can always be changed later. For now, I’ll call the project, repository, and R package geneTable.</p>
+<p>Coming up with a name is always a hard part - I want something that is general enough, but specific enough.. It’s hopeless. So, rather than getting too hung up on it, I’ll remember that it can always be changed later. For now, I’ll call the project, repository, and R package <strong>geneTable</strong>.</p>
 <p>Basically, this is a second iteration on the skeleton package idea.</p>
 </div>
 <div id="initializing-an-r-package" class="section level2">
 <h2>Initializing an R Package</h2>
-<p>I generally put all the code I’m working on in a directory called <code>projects</code> under my home directory. I’ll do the same with <code>geneTable</code>. I’m currently working to do more and more things in the Hadley Wickham way, so I’ll be using <a href="https://github.com/hadley/devtools">devtools</a>, augmented with <a href="https://rstudio.github.io/packrat/">packrat</a> to manage dependancies for increased reproducibility.</p>
-<p>Thus, to start the package, I change to my projects directory, start R, and run some commands:</p>
+<p>I generally put all the code I’m working on in a directory called <code>projects</code> under my home directory. I’ll do the same with <code>geneTable</code>. I’m currently working to do more and more things in the Hadley Wickham way, so I’ll be using <a href="https://github.com/hadley/devtools">devtools</a>.</p>
+<div id="create-package-with-devtools" class="section level3">
+<h3>Create Package with Devtools</h3>
+<p>Thus, to start the package, I change to my projects directory, start R, and run some commands to get devtools and initialize the package:</p>
 <pre><code>cd ~/projects
 R
-source(&quot;https://bioconductor.org/biocLite.R&quot;)
-install.packages(c(&quot;devtools&quot;, &quot;packrat&quot;))
+install.packages(c(&quot;devtools&quot;, &quot;roxygen2&quot;, &quot;testthat&quot;, &quot;lintr&quot;))
+
+## or 
+# source(&quot;https://bioconductor.org/biocLite.R&quot;)
+# biocLite(c(&quot;devtools&quot;, &quot;roxygen2&quot;, &quot;testthat&quot;, &quot;lintr&quot;))
+
 devtools::create(&quot;geneTable&quot;)
-packrat::init(&quot;geneTable&quot;)
-install.packages(c(&quot;devtools&quot;, &quot;roxygen2&quot;, &quot;testthat&quot;)) # update all as prompted
-devtools::test() # add testing infrastructure
-packrat::set_opts(vcs.ignore.src = TRUE) # don't put src in git
+devtools::test(&quot;geneTable&quot;) # add testing infrastructure - answer Yes at the prompt
 q()</code></pre>
-<p>That process makes some directories. Now ~/projects/geneTable exists, and looks like this (omitting subdirectories under <code>./packtrat/</code>:</p>
+<p>That process makes some directories. Now ~/projects/geneTable exists, and looks like this:</p>
 <pre><code>geneTable/
 ├── DESCRIPTION
 ├── NAMESPACE
 ├── R
 ├── geneTable.Rproj
-├── packrat
-│   ├── init.R
-│   ├── lib
-│   ├── lib-R
-│   ├── lib-ext
-│   ├── packrat.lock
-│   ├── packrat.opts
-│   └── src
 └── tests
     ├── testthat
     └── testthat.R</code></pre>
+</div>
+</div>
+<div id="add-version-control" class="section level2">
+<h2>Add Version Control</h2>
 <p>I want this to be under version control, so I’ll initialize a git repository:</p>
 <pre><code>cd ~/projects/geneTable
 git init</code></pre>
-<p><code>devtools::create()</code> made a .gitignore file, but it’s pretty limited. Instead, I’ll copy one from elsewhere (I really need to make my own!):</p>
-<pre><code>r -e 'download.file(&quot;https://raw.githubusercontent.com/github/gitignore/master/R.gitignore&quot;, &quot;.gitignore&quot;, &quot;curl&quot;)'</code></pre>
-<p>I also include some edits, adding:</p>
-<pre><code># don't commit files that may have passwords
-.env
-*.cnf
-
-# packrat stuff
-packrat-scenario*/
-packrat/lib*/
-packrat/src/</code></pre>
+<p><code>devtools::create()</code> made a .gitignore file, but it’s pretty limited. Instead, I’ll copy one that I’m cobbling together in <a href="https://gist.githubusercontent.com/bheavner/4766859540677cafd0a3ed9a27fd9586">a gist</a>:</p>
+<pre><code>r -e 'download.file(&quot;https://gist.githubusercontent.com/bheavner/4766859540677cafd0a3ed9a27fd9586/raw/&quot;, &quot;.gitignore&quot;, &quot;curl&quot;)'</code></pre>
 <p>Now, I can add my files to the repository and do my first commit:</p>
 <pre><code>git add .
 git commit -m &quot;First commit&quot;</code></pre>
-<p>Next, I want to have this repository on gitHub, so I need to set up a repository there to use as the origin for this repository.</p>
-</div>
-<div id="creating-a-new-github-repository" class="section level2">
-<h2>Creating a new github repository</h2>
-<p>So, I’ll start by making a github repo for the R package under the <a href="https://github.com/UW-GAC/">GAC organization github account</a>.</p>
+<div id="create-new-github-repository" class="section level3">
+<h3>Create New Github Repository</h3>
+<p>Next, I want to have this repository on gitHub, so I need to set up a repository there to use as the origin for this repository. So, I’ll start by making a github repo for the R package under the <a href="https://github.com/UW-GAC/">GAC organization github account</a>.</p>
 <p>A couple notes on the new repository:</p>
 <ul>
 <li>Include a description</li>
 <li>I choose to make it public (the GAC doesn’t have private repositories at the moment)</li>
 <li>I’ll initialize without a README, license, or .gitignore (making those will be part of the R package)</li>
 </ul>
-<p>So now the <a href="https://github.com/UW-GAC/geneTable">geneTable</a> repository exists!</p>
+<p>Now the <a href="https://github.com/UW-GAC/geneTable">geneTable</a> repository exists!</p>
 </div>
-<div id="pushing-local-working-copy-of-the-code-to-the-repository" class="section level2">
-<h2>pushing local working copy of the code to the repository</h2>
+<div id="push-local-working-copy-of-the-code-to-github" class="section level3">
+<h3>Push Local Working Copy of the Code to GitHub</h3>
 <p>To push my repository to gitHub, I need to set github as the origin, and do a push:</p>
 <pre><code>cd ~/projects/geneTable
 git remote add origin https://github.com/UW-GAC/geneTable.git
 git push -u origin master</code></pre>
+<p>Now you can see the <a href="https://github.com/UW-GAC/geneTable/commit/6527b89f176d4771569f9cb9fc311d626ad3354d">first commit for this repository</a> on GitHub.</p>
+</div>
+</div>
+<div id="start-gitflow" class="section level2">
+<h2>Start GitFlow</h2>
+<p>Before I add any code, I want to start using the <a href="http://nvie.com/posts/a-successful-git-branching-model/">gitflow</a> approach of having a tagged/versioned long-running <em>master</em> branch (I’ll add the <em>develop</em> and <em>feature</em> branches soon). The <a href="http://nvie.com/img/git-model@2x.png">gitflow diagram</a> uses a <strong>0.1</strong> as the first tag, but I’ll follow the <a href="http://r-pkgs.had.co.nz/description.html#version">R versioning convention</a> and use <strong>0.0.0.9000</strong> as my first tag. (Check out <a href="https://yihui.name/en/2013/06/r-package-versioning/">Yihui Xie’s thoughts on versioning</a> if you’d like more.)</p>
+<pre><code>git tag 0.0.0.9000
+git push --tags</code></pre>
+<p>Now you can see this commit on GitHub under the list of <a href="https://github.com/UW-GAC/geneTable/tags">tags</a>.</p>
+<div id="add-code-to-repository" class="section level3">
+<h3>Add Code to Repository</h3>
+<p>Since we’re using GitFlow, changes to code should mostly happen via short-lived feature branches that branch off of a long-running <em>develop</em> branch. So, we need to make those branches so we can add code.</p>
+<p>I’ll start managing my refactoring with gitflow by making the long-running <code>develop</code> branch:</p>
+<pre><code>git branch develop</code></pre>
+<p>Then I’ll make a new feature branch from develop for working on a first coding task - in this case, copying the original script to the repository so I can start refactoring:</p>
+<pre><code>git checkout -b features/start develop</code></pre>
+<p>Now I’m on the <em>features/start</em> branch, so I can actually start working with the code.</p>
+<p>R code goes in the <code>R</code> folder of the package (Someone named Ben Best has written a nice description of <a href="https://ucsb-bren.github.io/env-info/wk07_package.html">what goes where in an R package</a>). So, I’ll copy the existing script to that directory.</p>
+<pre><code>cp /projects/topmed/qc/freeze.2a/analysts/jaind/R/make_gencodeV19_aggUnit.R ~/projects/geneTable/R/</code></pre>
+<p>And that’s my first feature. Now that I’ve done that, I want to merge <em>features/start</em> back into <em>develop</em> and then refactor from there.</p>
+<pre><code>git add .
+git commit
+# add commit message
+git checkout develop
+git merge --no-ff features/start</code></pre>
+<p>Now I can safely delete the <em>features/start</em> branch.</p>
+<pre><code>git branch -d features/start</code></pre>
+</div>
+<div id="push-develop-branch-to-github" class="section level3">
+<h3>Push Develop Branch to GitHub</h3>
+<p>Currently, the GithHub repository only has the master branch, so I need to push the Develop Branch to update this code. In general, I think I’ll be following this workflow of making feature branches locally, then merging into develop and keeping the long-running develop and master branches on github.</p>
+<p>Here’s how to create the develop branch on the GitHub repository and push my recent commits:</p>
+<pre><code>git push --set-upstream origin develop</code></pre>
+</div>
+</div>
+<div id="begin-refactoring" class="section level2">
+<h2>Begin Refactoring</h2>
+<p>Our goal in preliminary refactoring is to begin to divide the code up a bit - both in the trivial sense of putting the correct bits in the proper places (thanks again, <a href="https://ucsb-bren.github.io/env-info/wk07_package.html!">Ben Best</a>, and in the more complicated sense of dividing the big script into functions (or, if we’re so inclined classes, methods, objects, and other such things). We’ll want to eventually make unit tests and add documentation for the functions, and it’s easiest to do that as we go, rather than trying to go back and do it later. But we’ll get to that later. Let’s start with the more trivial part first - we need to move <code>library()</code> functions from the script to the DESCRIPTION file, and make sure we have the required metadata (also in the DESCRIPTION file) for our new package.</p>
+<div id="continue-to-use-gitflow" class="section level3">
+<h3>Continue to Use gitFlow</h3>
+<p>I’ll make a new feature branch from <em>develop</em> for working on this first small refactoring task of moving library dependancies from <code>library()</code> calls in the script and editing the DESCRIPTION file:</p>
+<pre><code>git checkout -b features/deps develop</code></pre>
+<p>Now I’m on the <em>features/deps</em> branch, so can actually start refactoring by adding the <code>GWASTools</code> package as a required dependancy for the <code>geneTable</code> package. I’ll do that the devtools way in R (I could manually edit DESCRIPTION as well, but I’m trying to use devtools more):</p>
+<pre><code>r
+source(&quot;https://bioconductor.org/biocLite.R&quot;)
+biocLite(&quot;GWASTools&quot;) # because I hadn't installed it before
+devtools::use_package(&quot;GWASTools&quot;)
+q()</code></pre>
+<p>You can check git status to see that this modified the <code>DESCRIPTION</code> file. I’ll also delete the <code>library(GWASTools)</code> line from make_gencodeV19_aggUnit.R.</p>
+<p>Next, I need to do some more editing to the DESCRIPTION file. I just did it with a text editor - the changes are pretty self-explanatory, and are in the file. At that point, I can do a commit on the feature branch:</p>
+<pre><code>git add DESCRIPTION
+git commit</code></pre>
+<p>Next, I need/want to add a LICENSE file - I just used the MIT file, and got it from my skeleton project like this:</p>
+<pre><code>r -e 'download.file(&quot;https://raw.githubusercontent.com/bheavner/packageTest/master/LICENSE&quot;, &quot;LICENSE&quot;, &quot;curl&quot;)'</code></pre>
+<p>That’s probably good for another commit.</p>
+<pre><code>git add LICENSE
+git commit -m &quot;add MIT LICENSE&quot;</code></pre>
+<p><strong>NOTE:</strong> For some reason, devtoools::check() isn’t working - I’d hoped it would at this point. This is worth investigating more later…</p>
+<p>Meanwhile, I’ll merge the <em>features/deps</em> branch back into <em>develop</em> and push it to gitHub.</p>
+<pre><code>git checkout develop
+git merge --no-ff features/deps
+git push</code></pre>
+<p>Now I can safely delete the <em>features/deps</em> branch, leaving just my <em>master</em> and <em>develop</em> branches, in good shape.</p>
+<pre><code>git branch -d features/deps</code></pre>
+</div>
+<div id="starting-real-refactoring" class="section level3">
+<h3>Starting Real Refactoring</h3>
+<p>To begin real refactoring, I’ll start looking over the original script to identify portions I can pull out and make into callable functions. There’s no set standard for how big a function should be, or what should go in it. I have a bias towards short functions that don’t do much. We’ll see if that leads to a messy R/ directory or not. It’s always useful to look a bit at <a href="https://github.com/tidyverse/ggplot2/tree/master/R">how experienced people build their packages</a>.</p>
+<p>Next up: adding tests with testthat and documentation with roxygen2, using devtools::check() as I iterate….</p>
+</div>
 </div>
 
 
