@@ -2,14 +2,19 @@
 title: "Starting a New R Package"
 author: "Ben Heavner"
 date: "4/3/2017"
-output: html_document
+output: 
+  html_document: # see here for docs: http://rmarkdown.rstudio.com/html_document_format.html
+    toc: true # table of content true
+    toc_float: true # floating TOC
+    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    theme: united  # many options for theme - see http://bootswatch.com/
+    highlight: tango  # specifies the syntax highlighting style
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-## Starting a New R Package
+## Introduction
 
 Here are a few notes on starting an R package. For context, I've previously made a [skeleton package](https://github.com/bheavner/packageTest). That may be worth looking at, at least because there's some useful links in the README, but in this case, I'll be doing things a tiny bit differently by starting with an existing R script. 
 
@@ -17,21 +22,9 @@ The current goal is to make a set of R functions to obtain gene definitions from
 
 Coming up with a name is always a hard part - I want something that is general enough, but specific enough.. It's hopeless. So, rather than getting too hung up on it, I'll remember that it can always be changed later. For now, I'll call the project, repository, and R package geneTable.
 
-This document will describe
-
-* [initializing an R package](#initializing-an-R-package)
-* [creating a new github repository](#creating-a-new-github-repository)
-* [pushing local working copy of the code to the repository](#pushing-local-working-copy-to-the-repository)
-* starting to refactor existing code
-* adding tests
-
-And maybe, depending how things shape up, I'll include stuff like 
-* using travis to run tests
-* using lintR
-
 Basically, this is a second iteration on the skeleton package idea.
 
-### Initializing an R Package
+## Initializing an R Package
 
 I generally put all the code I'm working on in a directory called `projects` under my home directory. I'll do the same with `geneTable`. I'm currently working to do more and more things in the Hadley Wickham way, so I'll be using [devtools](https://github.com/hadley/devtools), augmented with [packrat](https://rstudio.github.io/packrat/) to manage dependancies for increased reproducibility.
 
@@ -103,7 +96,7 @@ git commit -m "First commit"
 
 Next, I want to have this repository on gitHub, so I need to set up a repository there to use as the origin for this repository.
 
-### Creating a new github repository
+## Creating a new github repository
 
 So, I'll start by making a github repo for the R package under the [GAC organization github account](https://github.com/UW-GAC/).
 
@@ -115,7 +108,7 @@ A couple notes on the new repository:
 
 So now the [geneTable](https://github.com/UW-GAC/geneTable) repository exists!
 
-### pushing local working copy of the code to the repository
+## pushing local working copy of the code to the repository
 
 To push my repository to gitHub, I need to set github as the origin, and do a push:
 
