@@ -225,7 +225,7 @@ And `devtools::check()` fails because of an error running tests: `Error: No test
 
 ### Add a Trivial Test
 
-We'll get into more details and examples of tests later, so for now, just treat this as a copy and paste - I will grab a gist that includes a function that always returns TRUE, and a test that confirms it, and put them in the project:
+We'll get into more details and examples of tests later, so for now, just treat this as a copy and paste - I will grab a gist that includes a [function that always returns TRUE](https://gist.githubusercontent.com/bheavner/bf0e1b8816692ebdfca2d7b74c165a64/), and [a test that confirms it](https://gist.githubusercontent.com/bheavner/aba968b52e456b903c047485158e6651/), and put them in the project:
 
 ```
 r -e 'download.file("https://gist.githubusercontent.com/bheavner/bf0e1b8816692ebdfca2d7b74c165a64/raw/4b06ce1a8d108dc27c75fcc6156867b9c67132a9/return-true.R", "R/return-true.R", "curl")'
@@ -270,7 +270,7 @@ git log --oneline --graph
 
 And we're ready to begin actually writing some R code for our package.
 
-## Add Code to be Refactored to the Repository
+## Add Code to be Refactored
 
 Remember that the goal of this exercise is to refactor an R script into an R package. So I'd like to put the original R script under version control, but don't expect that it will end up in the package after we're done. In general, the code for a package goes in the `R` folder of the package (Someone named Ben Best has written a nice description of [what goes where in an R package](https://ucsb-bren.github.io/env-info/wk07_package.html)). However, since the original script includes things that don't belong in a pakage (e.g. functions like `library()` or things that interact with the environment like `rm(list=objects())`), I don't want to put the original script in the R/ directory.
 
@@ -337,4 +337,22 @@ git branch -d features/deps
 ### Starting Real Refactoring
 To begin real refactoring, I'll start looking over the original script to identify portions I can pull out and make into callable functions. There's no set standard for how big a function should be, or what should go in it. I have a bias towards short functions that don't do much. We'll see if that leads to a messy R/ directory or not. As you develop your approach to how big a function should be, it's always useful to look a bit at how an experienced person has structured a pretty [powerful and popular package](https://github.com/tidyverse/ggplot2/tree/master/R).
 
+The [original script](https://github.com/UW-GAC/genetable/blob/develop/original/make_gencodeV19_aggUnit.R) is a great starting point - it's well-organized, logically laid out, and the comments are useful and clear.
+
+The first discrete step in the script reads a tab-delimited file from a specified path, runs some sanity checks on the contents of the file, and returns a data frame containing the features of interest from the original file:
+```
+base.path<-"/projects/topmed"
+gt<-read.table(file.path(base.path,"downloaded_data/Gencode/v19/gencode.v19.annotation.gtf.gz"),as.is=TRUE,sep="\t"); dim(gt)
+colnames(gt)<-c("seqname","source","feature","start","end","score","strand","frame","attribute") #see http://uswest.ensembl.org/info/website/upload/gff.html#fields to figure the feilds of the gtf file
+
+table(gt$feature,grepl("tag basic",gt$attribute))
+table(gt$feature=="transcript",grepl("tag basic",gt$attribute))
+
+# subset gtf to give a dataframe with transcripts for only the basic set of genes
+gtb<-gt[gt$feature=="transcript" & grepl("tag basic",gt$attribute),]; dim(gtb)
+```
+
+In this case, the resulting dataframe consists of rows for which the 'feature' column is "transcript" and the 'attribute' column includes the string "tag basic".
+
+So I will likely want to refactor this chunk of code from the script into a function that takes a file path, a string matching the feature of interest, and a string matching the attribute of interest as arguments, and returns a data frame containing the rows from the file that match the feature and contain the attribute.
 

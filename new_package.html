@@ -346,7 +346,7 @@ q()</code></pre>
 <p>And <code>devtools::check()</code> fails because of an error running tests: <code>Error: No tests found for genetable</code>. Our goal is to pass <code>devtools::check()</code> again now that we’ve broken our package.</p>
 <div id="add-a-trivial-test" class="section level3">
 <h3>Add a Trivial Test</h3>
-<p>We’ll get into more details and examples of tests later, so for now, just treat this as a copy and paste - I will grab a gist that includes a function that always returns TRUE, and a test that confirms it, and put them in the project:</p>
+<p>We’ll get into more details and examples of tests later, so for now, just treat this as a copy and paste - I will grab a gist that includes a <a href="https://gist.githubusercontent.com/bheavner/bf0e1b8816692ebdfca2d7b74c165a64/">function that always returns TRUE</a>, and <a href="https://gist.githubusercontent.com/bheavner/aba968b52e456b903c047485158e6651/">a test that confirms it</a>, and put them in the project:</p>
 <pre><code>r -e 'download.file(&quot;https://gist.githubusercontent.com/bheavner/bf0e1b8816692ebdfca2d7b74c165a64/raw/4b06ce1a8d108dc27c75fcc6156867b9c67132a9/return-true.R&quot;, &quot;R/return-true.R&quot;, &quot;curl&quot;)'
 echo &quot;&quot; &gt;&gt; R/return-true.R 
 r -e 'download.file(&quot;https://gist.githubusercontent.com/bheavner/aba968b52e456b903c047485158e6651/raw/b742f272bd6bd8458f4247689e7a3189aec5cde8/test-testthat.R&quot;, &quot;tests/testthat/test-testthat.R&quot;, &quot;curl&quot;)'
@@ -376,8 +376,8 @@ git push</code></pre>
 <p>And we’re ready to begin actually writing some R code for our package.</p>
 </div>
 </div>
-<div id="add-code-to-be-refactored-to-the-repository" class="section level2">
-<h2>Add Code to be Refactored to the Repository</h2>
+<div id="add-code-to-be-refactored" class="section level2">
+<h2>Add Code to be Refactored</h2>
 <p>Remember that the goal of this exercise is to refactor an R script into an R package. So I’d like to put the original R script under version control, but don’t expect that it will end up in the package after we’re done. In general, the code for a package goes in the <code>R</code> folder of the package (Someone named Ben Best has written a nice description of <a href="https://ucsb-bren.github.io/env-info/wk07_package.html">what goes where in an R package</a>). However, since the original script includes things that don’t belong in a pakage (e.g. functions like <code>library()</code> or things that interact with the environment like <code>rm(list=objects())</code>), I don’t want to put the original script in the R/ directory.</p>
 <p>So, I’ll make a new feature branch, then copy the existing script to a new directory:</p>
 <pre><code>git checkout -b features/src develop
@@ -395,8 +395,8 @@ git push</code></pre>
 <div id="begin-refactoring" class="section level2">
 <h2>Begin Refactoring</h2>
 <p>Our goal in preliminary refactoring is to begin to divide the code up a bit - both in the trivial sense of putting the correct bits in the proper places (thanks again, <a href="https://ucsb-bren.github.io/env-info/wk07_package.html!">Ben Best</a>, and in the more complicated sense of dividing the big script into functions (or, if we’re so inclined classes, methods, objects, and other such things). We’ll want to have goodies like unit tests and documentation for the functions so that we can be confident that our functions are behaving as expected and that we’re not breaking things if we change individual functions. It’s easiest to do that as we go, rather than trying to go back and do it later. Let’s start with the more trivial part of refactoring first - we need to move <code>library()</code> functions that introduce dependancies on other R packages from the script to the DESCRIPTION file.</p>
-<div id="continue-to-use-gitflow" class="section level3">
-<h3>Continue to Use gitFlow</h3>
+<div id="add-dependancies-from-script-library-calls" class="section level3">
+<h3>Add Dependancies from Script library() Calls</h3>
 <p>I’ll continue what’s hopefully becoming a familiar workflow by making a new feature branch from <em>develop</em> for working on this first small refactoring task of moving library dependancies from <code>library()</code> calls in the script:</p>
 <pre><code>git checkout -b features/deps develop</code></pre>
 <p>Now I’m on the <em>features/deps</em> branch, so can actually start refactoring by adding the <code>GWASTools</code> package as a required dependancy for the <code>genetable</code> package. I’ll do that the devtools way in R (I could manually edit DESCRIPTION as well, but I’m trying to use devtools more):</p>
@@ -407,8 +407,10 @@ devtools::use_package(&quot;GWASTools&quot;)
 q()</code></pre>
 <p><em><strong>Style Note:</strong> Did you notice the <strong>Refer to functions with GWASTools::fun()</strong> message from <code>devtool::use_package()</code>? Practically, a person using the genetable package would likely use <code>library(&quot;GWASTools&quot;)</code> so they wouldn’t have to type out <code>GWASTools::fun()</code> for every function they want to use from GWASTools. Within packages, I like to use the longer form of <code>GWASTools::fun()</code> so it’s clear which external package provides a particular function.</em></p>
 <p>You can check git status to see that this modified the <code>DESCRIPTION</code> file, and use <code>devtools::check()</code> to make sure that this hasn’t broken anything yet.</p>
-<p>All looks well, so that’s another tiny feature branch completed (don’t worry, they’ll get longer). Merge the <em>features/deps</em> branch back into <em>develop</em> and push it to gitHub.</p>
-<pre><code>git checkout develop
+<p>All looks well, so that’s another tiny feature branch completed (don’t worry, they’ll get longer). Commit the changes, then merge the <em>features/deps</em> branch back into <em>develop</em> and push it to gitHub.</p>
+<pre><code>git add DESCRIPTION
+git commit
+git checkout develop
 git merge --no-ff features/deps
 git push</code></pre>
 <p>Now I can safely delete the <em>features/deps</em> branch, leaving just my <em>master</em> and <em>develop</em> branches, in good shape.</p>
@@ -416,7 +418,20 @@ git push</code></pre>
 </div>
 <div id="starting-real-refactoring" class="section level3">
 <h3>Starting Real Refactoring</h3>
-<p>To begin real refactoring, I’ll start looking over the original script to identify portions I can pull out and make into callable functions. There’s no set standard for how big a function should be, or what should go in it. I have a bias towards short functions that don’t do much. We’ll see if that leads to a messy R/ directory or not. It’s always useful to look a bit at <a href="https://github.com/tidyverse/ggplot2/tree/master/R">how experienced people build their packages</a>.</p>
+<p>To begin real refactoring, I’ll start looking over the original script to identify portions I can pull out and make into callable functions. There’s no set standard for how big a function should be, or what should go in it. I have a bias towards short functions that don’t do much. We’ll see if that leads to a messy R/ directory or not. As you develop your approach to how big a function should be, it’s always useful to look a bit at how an experienced person has structured a pretty <a href="https://github.com/tidyverse/ggplot2/tree/master/R">powerful and popular package</a>.</p>
+<p>The <a href="https://github.com/UW-GAC/genetable/blob/develop/original/make_gencodeV19_aggUnit.R">original script</a> is a great starting point - it’s well-organized, logically laid out, and the comments are useful and clear.</p>
+<p>The first discrete step in the script reads a tab-delimited file from a specified path, runs some sanity checks on the contents of the file, and returns a data frame containing the features of interest from the original file:</p>
+<pre><code>base.path&lt;-&quot;/projects/topmed&quot;
+gt&lt;-read.table(file.path(base.path,&quot;downloaded_data/Gencode/v19/gencode.v19.annotation.gtf.gz&quot;),as.is=TRUE,sep=&quot;\t&quot;); dim(gt)
+colnames(gt)&lt;-c(&quot;seqname&quot;,&quot;source&quot;,&quot;feature&quot;,&quot;start&quot;,&quot;end&quot;,&quot;score&quot;,&quot;strand&quot;,&quot;frame&quot;,&quot;attribute&quot;) #see http://uswest.ensembl.org/info/website/upload/gff.html#fields to figure the feilds of the gtf file
+
+table(gt$feature,grepl(&quot;tag basic&quot;,gt$attribute))
+table(gt$feature==&quot;transcript&quot;,grepl(&quot;tag basic&quot;,gt$attribute))
+
+# subset gtf to give a dataframe with transcripts for only the basic set of genes
+gtb&lt;-gt[gt$feature==&quot;transcript&quot; &amp; grepl(&quot;tag basic&quot;,gt$attribute),]; dim(gtb)</code></pre>
+<p>In this case, the resulting dataframe consists of rows for which the ‘feature’ column is “transcript” and the ‘attribute’ column includes the string “tag basic”.</p>
+<p>So I will likely want to refactor this chunk of code from the script into a function that takes a file path, a string matching the feature of interest, and a string matching the attribute of interest as arguments, and returns a data frame containing the rows from the file that match the feature and contain the attribute.</p>
 </div>
 </div>
 
