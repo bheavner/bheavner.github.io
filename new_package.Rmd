@@ -20,9 +20,9 @@ Here are a few notes on starting an R package. For context, I've previously made
 
 In this case, I'll be doing things a tiny bit differently from the skeleton package by starting with an existing R script, and writing this vignette describing the refactoring process with a gitFlow approach to version control..
 
-The current goal is to make a set of R functions to obtain gene definitions from an outside data source and make a table of those gene definitions in the GAC database. We'll bundle those functions up as an R package so it's easy to get them and reuse them, and I'll put the code on github because that's an easy way to distribute it and allow installation from any Internet-connected workstation.
+The current goal is to make a set of R functions to obtain gene definitions from an outside data source and make a table of those gene definitions in the GAC database. We'll bundle those functions up as an R package so it's easy to get them and reuse them, and I'll put the code on github because that's an easy way to distribute it and allow installation from any Internet-connected workstation. Along the way, I'll be demonstrating a gitflow workflow for development with version control, use of github, test-driven development, and using roxygen for documenting as we develop. So there's lots of [yak shaving](http://www.urbandictionary.com/define.php?term=yak%20shaving) as we set up a lot of infrastructure and introduce new tools and approaches, but hopefully by the end, some of the motivation becomes clear and the result is satisfying enough to convince you that it's worth starting to write code this way.
 
-Coming up with a name is always a hard part - I want something that is general enough, but specific enough.. It's hopeless. So, rather than getting too hung up on it, I'll remember that it can always be changed later. For now, I'll call the project, repository, and R package **genetable**.
+So we begin! Coming up with a name is always a hard part - I want something that is general enough, but specific enough.. It's hopeless. So, rather than getting too hung up on it, I'll remember that it can always be changed later. For now, I'll call the project, repository, and R package **genetable**.
 
 Basically, this is a second iteration on the skeleton package idea.
 
@@ -111,7 +111,7 @@ cd ~/projects/genetable
 git remote add origin https://github.com/UW-GAC/genetable.git
 git push -u origin master
 ```
-Now you can see the [first commit for this repository](https://github.com/UW-GAC/genetable/commit/6527b89f176d4771569f9cb9fc311d626ad3354d) on GitHub.
+You (or anyone else) can now see the [first commit for this repository](https://github.com/UW-GAC/genetable/commit/) on GitHub. One result of this is that **Now, anyone can install the package**. To install a package from github, you use `devtools::install_github()`. So in this case, you could install our empty package with `devtools::install_github("UW-GAC/genetable")`. Once they exist, you can also spcify a branch if you like, such as `devtools::install_github("UW-GAC/genetable", ref = "develop")`.
 
 ## Start GitFlow
 
@@ -200,7 +200,7 @@ Yay! Now we've got a working R package (that doesn't do anything) and a gitflow 
 
 ## Add Testing to the package
 
-There is much to read about "Test Driven Development", but I won't get into the whys here. There's also much to read about the specifics of [testing with the testthat package](http://r-pkgs.had.co.nz/tests.html), and you can read more there if you like. This is document is demonstrating the how. I'll start introducing this new feature to our package by making a new feature branch:
+There is much to read about "Test Driven Development" - someone named Ned Batchelder gave [a good presentation on TDD at PyCon2014](https://nedbatchelder.com/text/test0.html), and someone named Jason Diamond has a [great python-centric motivating example](http://www.onlamp.com/pub/a/python/2004/12/02/tdd_pyunit.html). There's also much to read about the specifics of [testing with the testthat package](http://r-pkgs.had.co.nz/tests.html), which is the devtools/R approach - but I won't get into the whys here. The current document is focused on demonstrating the how. So, I'll start introducing this new feature of "testing" to our package by making a new feature branch:
 
 ```
 git checkout -b features/testing develop
@@ -268,7 +268,35 @@ git log --oneline --graph
 * 7d45d66 First commit
 ```
 
-And we're ready to begin actually writing some R code for our package.
+## Add README.md
+
+When you look at the [genetable](https://github.com/UW-GAC/genetable) repository on gitHub, if there's not a README file, there's a prompt stating
+```
+Help people interested in this repository understand your project by adding a README. 
+```
+
+So, let's go ahead and add a readme. Here's the gitflow/devtools way to do that:
+
+```
+git checkout -b features/add_readme develop
+r
+devtools::use_readme_md() # could be use_readme_rmd, but I don't intend to put code in this at the moment
+q()
+```
+Then edit the README.md file as desired, committing changes as you go. After things are good, run devtools::check(), commit, merge, and push *develop*:
+```
+r
+devtools::check()
+q()
+git add .
+git commit -m "Add a README.md file"
+git checkout develop
+git merge --no-ff features/add_readme
+git branch -d features/add_readme
+git push
+```
+
+And now we're ready to begin actually writing some R code for our package!
 
 ## Add Code to be Refactored
 
@@ -354,5 +382,237 @@ gtb<-gt[gt$feature=="transcript" & grepl("tag basic",gt$attribute),]; dim(gtb)
 
 In this case, the resulting dataframe consists of rows for which the 'feature' column is "transcript" and the 'attribute' column includes the string "tag basic".
 
-So I will likely want to refactor this chunk of code from the script into a function that takes a file path, a string matching the feature of interest, and a string matching the attribute of interest as arguments, and returns a data frame containing the rows from the file that match the feature and contain the attribute.
+So I will likely want to refactor this chunk of code from the script into a function that takes a file path, a string matching the feature of interest, and a string matching the attribute of interest as arguments, and returns a data frame containing the rows from the file that match the feature and contain the attribute. I may also make some functions for the sanity checks/summary data printing as well, but likely as another feature.
 
+I'll make a new branch to develop the first function - `import_gencode()`:
+```
+git checkout -b features/gen_import develop
+```
+
+### Diversion - Two Branches
+While looking at the code, I don't see where GWASTools is actually used. So maybe we don't need it in the package at all! I'd like to revise my approach, and only add that dependancy if I need it later. So I want to go back to my dev branch and remove the dependancy. Meanwhile, I'll keep the *features/gen_import* branch, because I'm doing some different things over there.
+
+```
+git checkout -b features/drop_dep develop
+```
+Then I use an editor to change the DESCRIPTION file by modifying `Imports: GWASTools` to `Imports: `. Run `devtools::check()`, commit, merge to *develop*, and delete that feature branch.
+
+```
+git add DESCRIPTION
+git commit
+git checkout develop
+git merge --no-ff features/drop_dep
+git branch -d features/drop_dep
+git push
+```
+
+Now my git commit history on the *develop* branch looks like this:
+
+```
+git log --oneline --graph
+*   0af3270 Merge branch 'features/drop_dep' into develop
+|\  
+| * 156ac44 remove GWASTools dependancy
+|/  
+*   e6e1eb3 Merge branch 'features/add_readme' into develop
+|\  
+| * ee47c96 Add README.md
+|/  
+*   ebb71d0 Merge branch 'features/deps' into develop
+|\  
+| * 87db2f6 Add GWASTools dependancy to DESCRIPTION
+|/  
+*   50b849e Merge branch 'features/src' into develop
+|\  
+| * 4450f98 Add script to repository and put it in .Rbuildignore
+|/  
+*   9d5baca Merge branch 'features/testing' into develop
+|\  
+| * bd05a06 Add testing to the package
+|/  
+*   d0ee1a1 Merge branch 'features/start' into develop
+|\  
+| * 2acc20a Add MIT License and package metadata in DESCRIPTION
+|/  
+* 7d45d66 First commit
+```
+
+(note that the *features/gen_import* branch doesn't appear on this, because it hasn't been merged back into *develop* yet.)
+
+Now I can go back over to *features/gen_import* and work on my first function again:
+
+```
+git checkout features/gen_import
+```
+
+### Developing the first function
+Recall that I've got a couple things in mind - 1) a function that takes a file path, a string matching the feature of interest, and a string matching the attribute of interest as arguments, and returns a data frame containing the rows from the file that match the feature and contain the attribute. and 2) I may also make some functions for the sanity checks/summary data printing as well, but likely as another feature.
+
+I don't want to forget that, so I'll start my making 2 [issues on my gitHub repository](https://github.com/UW-GAC/genetable/issues) to keep track of those ideas. I just do that on the gitHub web page by clicking on the "issues" tab at the top of [the repository](https://github.com/UW-GAC/genetable/).
+
+My import function will be called `import_gencode()`, and the code will go in `genetable/R/import-gencode.r`.
+
+Perhaps counterintuitively, I will begin working on the first function by writing a test for that function that I expect to fail, then fixing the function so it passes (remember Ned Batchelder's [PyCon2014 talk](https://nedbatchelder.com/text/test0.html), and Jason Diamond's [motivating example](http://www.onlamp.com/pub/a/python/2004/12/02/tdd_pyunit.html).)
+
+I'm going to use `testthat` for testing. `testthat` provides "expectations" via an `expect_that()` function that provide the basis of tests. `testthat` also gives some handy shortcut syntax for specific `expect_that()` operations, such as `expect_error()`. (see [Hadley's R Journal article on testthat](https://journal.r-project.org/archive/2011-1/RJournal_2011-1_Wickham.pdf) for more).
+
+For example, since `import_gencode()` doesn't exist yet, we'd expect it to throw an error if we tried to use it. You can confirm that in r with:
+```
+r
+testthat::expect_error(import_gencode(), )
+```
+And this doesn't give any output, because there was, in fact, an error. However, suppose we want to return a specific error, "path not defined" if the path to the file isn't given in the function call. You can (and generally should) give a specific error in the test, like this:
+```
+r
+testthat::expect_error(import_gencode(), "path not defined")
+```
+In this case, the output is
+```
+Error: error$message does not match "path not defined".
+Actual value: "could not find function "import_gencode""
+```
+Which means that the test doesn't pass - the error message was different than what we want.
+
+Functionally, testthat will look at a tests/testthat/ directory, and run all the tests it finds there. Tests are composed in r scripts using a context and the test_that() function. test_that() takes two arguments: a string describing the test, and a chunk of code containing the expect_that() test.
+
+Remember that we made a *test-testthat.R* file as a trivial test when we added testing to the package earlier? Looking at that code should be more meaningful to you now:
+```
+# tests/testthat/test-testthat.R
+context("test_testthat - unit tests")
+
+test_that("test_return_true returns TRUE", {
+  expect_true(return_true())
+})
+```
+
+In short, this is a test that confirms the function `return_true()` actually does return TRUE. This test is run when we use devtools::test().
+
+So, since I'm using `testthat`, I'll put the new tests for the test_import() function in the same directory as *test-testthat.R* - in `genetable/tests/testthat/test-import-gencode.r`. I'll make the function and test files **edit these paths as appropriate** and then start writing them:
+
+```
+touch ~/projects/genetable/R/import-gencode.r
+touch ~/projects/genetable/tests/testthat/test-import-gencode.r
+```
+
+Here's how I'd start *test-import-gencode.r* in the case of our example in which we want `import_gencode()` to abort and return an error `"path not defined"` if the path to the file isn't given in the function call.
+
+```
+context("test_import_gencode - unit tests")
+
+test_that("import-gencode returns an error if the file path is not defined", {
+  expect_error(import_gencode(), "path not defined")
+})
+```
+
+And, adding that test, when I run `devtools::test()`, it fails, as expected:
+```
+> devtools::test()
+Loading genetable
+Testing genetable
+test_import_gencode - unit tests: 1
+test_testthat - unit tests: .
+
+Failed -------------------------------------------------------------------------
+1. Failure: import-gencode returns an error if the file path is not defined (@test_import_gencode.r#4) 
+error$message does not match "path not defined".
+Actual value: "could not find function "import_gencode""
+
+
+DONE ===========================================================================
+```
+
+Before we start fixing it, there's one more important tool that we're going to use as we write code - **lint**.
+
+### USE LINT
+
+Basically, lint is a program that looks at the code, and make sure it conforms to some style guides and is programatically correct. It may seem like a pain, or unreasonable, but if your code passes lint with no errors or warnings, it is much more readable, clean, and looks pretty. Use it.
+
+Here's what happens when I run lint on the package so far (still in the *features/gen_import* branch):
+```
+> devtools::lint()
+Linting genetable....
+>
+```
+
+So that's nice and anti-climactic! The package is passing with no errors or warnings - the code is clean so far. It won't go as smoothly on the next iteration, I bet...
+
+### Fix Failing Test(s)
+So now we've got a development task - genetable::import_gencode() is failing a test! Our goal is to write the function so that it passes the test. Here's a function that does that:
+```
+#genetable/R/import-gencode.r
+import_gencode <- function(path){
+  if (missing(path)) stop("path not defined")
+}
+```
+(note that we can get a lot more sophisticated with [argument checking](https://cran.r-project.org/web/packages/ArgumentCheck/vignettes/ArgumentChecking.html), but I won't do that now.)
+
+For safety, I want to run lint, run the tests, and check the package.
+```
+> devtools::lint()
+Linting genetable.....
+> devtools::test()
+Loading genetable
+Testing genetable
+test_import_gencode - unit tests: .
+test_testthat - unit tests: .
+
+DONE ===========================================================================
+> devtools::check()
+...
+Status: OK
+
+R CMD check results
+0 errors | 0 warnings | 0 notes
+```
+
+So, everything is looking good so far! We've got a functioning R package that a user could install, and it includes a function. But there's one more piece remaining before we continue to work to finish this feature - documentation.
+
+### Document with roxygen
+
+It is painful to go back and document every function in a package if you're starting from scratch. So it's better to document as you go. Each time you write a function, you can write a quick description of the expected arguments and what it will return, and give an example of how to use the function. Of course, you'll iterate and improve as you go. But start now. I'll use `devtools::document()` and roxygen2. Of course there's an [Introduction to roxygen2](https://cran.r-project.org/web/packages/roxygen2/vignettes/roxygen2.html) vignette, but basically I'll be adding some comments prefaced with the string `#'`. 
+
+For example, we should document genetable::import_gencode(). Perhaps we could start by modifying `genetable/R/import-gencode.r` to look like this:
+```
+#' Load a gencode file. 
+#'  
+#' @param path Path to the gencode file. 
+#' @return A data frame containing the rows from the file that match the specified feature and contain the given attribute. 
+#' @examples
+#' \dontrun{
+#' import_gencode(path = 'path/to/file.tsv')
+#' }
+#' @export
+
+import_gencode <- function(path){
+  if (missing(path)) stop("path not defined")
+}
+```
+
+Now, when we use `devtools::document()` documentation is produced:
+```
+> devtools::document()
+Updating genetable documentation
+Loading genetable
+Writing NAMESPACE
+Writing import_gencode.Rd
+```
+
+runing lint,  the tests, and checking the package all still work. And now, I can learn more about `genetable::import_gencode()`:
+```
+r
+?genetable::import_gencode()
+```
+
+Now **that** is worth a commit!
+
+```
+git add .
+git commit
+```
+
+### Iterate
+Now it's a process of iteration: write a test that fails, update the function to pass the test, check documentation, run lint, check package. Once the feature is complete, merge back to develop, then move on to next feature.
+
+In my case, I'll use tools from the tidyverse package for this function, so I'll add that dependancy in this feature branch, too (similar to how I added GWASTools before). After some work, here's the commit that merges `R/import-gencode.r` and `tests/testthat/test_import_gencode.r` from the *features/gen_import* branch back to the *develop* branch - so you can see where the code is at that point.
+
+Now that there's a complete feature that may be useful to others, I'd like to increment the version, and push this package to the *master* branch. That's up next.
