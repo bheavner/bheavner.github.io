@@ -536,6 +536,11 @@ Linting genetable....
 
 So that's nice and anti-climactic! The package is passing with no errors or warnings - the code is clean so far. It won't go as smoothly on the next iteration, I bet...
 
+
+##TODO - 
+[add lintr to tests](https://github.com/jimhester/lintr#testthat)?
+
+
 ### Fix Failing Test(s)
 So now we've got a development task - genetable::import_gencode() is failing a test! Our goal is to write the function so that it passes the test. Here's a function that does that:
 ```
@@ -613,6 +618,10 @@ git commit
 ### Iterate
 Now it's a process of iteration: write a test that fails, update the function to pass the test, check documentation, run lint, check package. Once the feature is complete, merge back to develop, then move on to next feature.
 
-In my case, I'll use tools from the tidyverse package for this function, so I'll add that dependancy in this feature branch, too (similar to how I added GWASTools before). After some work, here's the commit that merges `R/import-gencode.r` and `tests/testthat/test_import_gencode.r` from the *features/gen_import* branch back to the *develop* branch - so you can see where the code is at that point.
+In my case, I'll use tools from the tidyverse package for this function, so I'll add that dependancy in this feature branch, too (similar to how I added GWASTools before). After some work, I decided that the scope of importing and sub-selecting is too much for this one function, because summarizing might sub-select differently, and I don't want to load the file two times. Better to just import and tidy the table to make it easier to work with. Sub-selecting will be a different function. So, I did some work with various commits to finish up the import-only function.
+
+**TODO: ADD LINK HERE** 
+
+here's the commit that merges `R/import-gencode.r` and `tests/testthat/test_import_gencode.r` from the *features/gen_import* branch back to the *develop* branch - so you can see where the code is at that point.
 
 Now that there's a complete feature that may be useful to others, I'd like to increment the version, and push this package to the *master* branch. That's up next.
