@@ -374,6 +374,15 @@ git push</code></pre>
 |/  
 * 7d45d66 First commit</code></pre>
 </div>
+<div id="add-automatic-lint-ing-to-the-package" class="section level3">
+<h3>Add automatic Lint-ing to the package</h3>
+<p>Lint is a program that looks at your code and makes sure it conforms to some style guides and is programatically correct. It may seem like a pain, or unreasonable, but if your code passes lint with no errors or warnings, it is much more readable, clean, and looks pretty. Use it.</p>
+<p>Here’s what happens when I run lint on the package so far:</p>
+<pre><code>&gt; devtools::lint()
+Linting genetable....
+&gt;</code></pre>
+<p>So that’s nice and anti-climactic! The package is passing with no errors or warnings - the code is clean so far. It won’t go as smoothly on the next iteration, I bet, but let’s set it up to automatically run Lint when we run tests. Fortunately, we can <a href="https://github.com/jimhester/lintr#testthat">integrate lint with testthat</a>. Basically, we just need to add a test. I’ll put the test in <code>tests/testthat/test-lint.R</code> and add lintr to the DESCRIPTION with <code>devtools::use_package(&quot;lintr&quot;, type = &quot;Suggests&quot;)</code>.</p>
+</div>
 </div>
 <div id="add-readme.md" class="section level2">
 <h2>Add README.md</h2>
@@ -546,21 +555,7 @@ Actual value: &quot;could not find function &quot;import_gencode&quot;&quot;
 
 
 DONE ===========================================================================</code></pre>
-<p>Before we start fixing it, there’s one more important tool that we’re going to use as we write code - <strong>lint</strong>.</p>
 </div>
-<div id="use-lint" class="section level3">
-<h3>USE LINT</h3>
-<p>Basically, lint is a program that looks at the code, and make sure it conforms to some style guides and is programatically correct. It may seem like a pain, or unreasonable, but if your code passes lint with no errors or warnings, it is much more readable, clean, and looks pretty. Use it.</p>
-<p>Here’s what happens when I run lint on the package so far (still in the <em>features/gen_import</em> branch):</p>
-<pre><code>&gt; devtools::lint()
-Linting genetable....
-&gt;</code></pre>
-<p>So that’s nice and anti-climactic! The package is passing with no errors or warnings - the code is clean so far. It won’t go as smoothly on the next iteration, I bet…</p>
-</div>
-</div>
-<div id="todo--" class="section level2">
-<h2>TODO -</h2>
-<p><a href="https://github.com/jimhester/lintr#testthat">add lintr to tests</a>?</p>
 <div id="fix-failing-tests" class="section level3">
 <h3>Fix Failing Test(s)</h3>
 <p>So now we’ve got a development task - genetable::import_gencode() is failing a test! Our goal is to write the function so that it passes the test. Here’s a function that does that:</p>
@@ -620,11 +615,71 @@ git commit</code></pre>
 <div id="iterate" class="section level3">
 <h3>Iterate</h3>
 <p>Now it’s a process of iteration: write a test that fails, update the function to pass the test, check documentation, run lint, check package. Once the feature is complete, merge back to develop, then move on to next feature.</p>
-<p>In my case, I’ll use tools from the tidyverse package for this function, so I’ll add that dependancy in this feature branch, too (similar to how I added GWASTools before). After some work, I decided that the scope of importing and sub-selecting is too much for this one function, because summarizing might sub-select differently, and I don’t want to load the file two times. Better to just import and tidy the table to make it easier to work with. Sub-selecting will be a different function. So, I did some work with various commits to finish up the import-only function.</p>
-<p><strong>TODO: ADD LINK HERE</strong></p>
-<p>here’s the commit that merges <code>R/import-gencode.r</code> and <code>tests/testthat/test_import_gencode.r</code> from the <em>features/gen_import</em> branch back to the <em>develop</em> branch - so you can see where the code is at that point.</p>
+<p>In my case, I’ll use tools from the tidyverse package for this function, so I’ll add that dependancy in this feature branch, too (similar to how I added GWASTools before). After some work, I decided that the scope of importing and sub-selecting is too much for this one function, because summarizing might sub-select differently, and I don’t want to load the file two times. Better to just import and tidy the table to make it easier to work with. Sub-selecting will be a different function. So, I did some work with various commits to finish up the import-only function. So, <a href="https://github.com/UW-GAC/genetable/commit/7332bd35b9fe798f02393583771510e09d3da4e1">here’s the commit</a> that merges <code>R/import-gencode.r</code> and <code>tests/testthat/test_import_gencode.r</code> from the <em>features/gen_import</em> branch back to the <em>develop</em> branch - so you can see where the code is at that point.</p>
 <p>Now that there’s a complete feature that may be useful to others, I’d like to increment the version, and push this package to the <em>master</em> branch. That’s up next.</p>
 </div>
+</div>
+<div id="make-release-branch" class="section level2">
+<h2>Make Release Branch</h2>
+<p>My <em>develop</em> branch now has a tested, documented, working feature that might be useful. So I want to release that to the world by pushing it to the <em>master</em> branch. Following the gitflow approach, I’ll do that by making a <em>relase</em> branch from <em>develop</em>, then increment the version there, and then merge that with <em>master</em> and with <em>develop</em>. I’ll increment the tag on the <em>master</em> branch as a “release”:</p>
+<pre><code>git checkout develop
+git branch release/0.0.0.9001
+git checkout release/0.0.0.9001</code></pre>
+<p>Then I’ll edit DESCRIPTION to change the Version to 0.0.0.9001, and commit the change:</p>
+<pre><code>git add DESCRIPTION
+git commit -m &quot;incrementing version number for release&quot;
+git checkout master
+git merge --no-ff release/0.0.0.9001
+git tag 0.0.0.9001
+git push
+git push --tags
+git checkout develop
+git merge --no-ff release/0.0.0.9001
+git branch -d release/0.0.0.9001
+git push</code></pre>
+<p>That’s a complete cycle from 0 to package that people can use for something useful. The commit history on my <em>master</em> branch looks like this:</p>
+<pre><code>git log --oneline --graph
+*   d115f0a Merge branch 'release/0.0.0.9001'
+|\  
+| * 22a7c4b incrementing version number for release
+| * d889c1e removing GWASTools from DESCRIPTION
+| *   f085135 fixing merge conflict on DESCRIPTION
+| |\  
+| | * 7332bd3 Trim the scope of import-gencode to return fields of interest
+| | * 2c47537 Add lintr to testthat - Fixes #1
+| | * fadb7cb progress on genetable::import_gencode()
+| | * 42def0b Add documentation with roxygen2 for import_gencode function
+| * |   0af3270 Merge branch 'features/drop_dep' into develop
+| |\ \  
+| | |/  
+| |/|   
+| | * 156ac44 remove GWASTools dependancy
+| |/  
+| *   e6e1eb3 Merge branch 'features/add_readme' into develop
+| |\  
+| | * ee47c96 Add README.md
+| |/  
+| *   ebb71d0 Merge branch 'features/deps' into develop
+| |\  
+| | * 87db2f6 Add GWASTools dependancy to DESCRIPTION
+| |/  
+| *   50b849e Merge branch 'features/src' into develop
+| |\  
+| | * 4450f98 Add script to repository and put it in .Rbuildignore
+| |/  
+| *   9d5baca Merge branch 'features/testing' into develop
+| |\  
+| | * bd05a06 Add testing to the package
+| |/  
+| *   d0ee1a1 Merge branch 'features/start' into develop
+| |\  
+|/ /  
+| * 2acc20a Add MIT License and package metadata in DESCRIPTION
+|/  
+* 7d45d66 First commit</code></pre>
+<p>The repository is available as <a href="https://github.com/UW-GAC/genetable/releases">a versioned release on gitHub</a>.</p>
+<p>And the package can be installed from an R session with <code>devtools::install_github(&quot;UW-GAC/genetable&quot;)</code>.</p>
+<p>An easy next step is to use <a href="https://travis-ci.org/">Travis</a> to automatically run tests when code is pushed to gitHub. A harder step (that I don’t have experience with yet) is inviting external collaborators to contribute to the package, and successfully integrating their code.</p>
 </div>
 
 
