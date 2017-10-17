@@ -684,7 +684,13 @@ git push</code></pre>
 <div id="automate-testing-with-travis" class="section level2">
 <h2>Automate Testing with Travis</h2>
 <p>An easy next step is to use <a href="https://travis-ci.org/">Travis</a> to automatically run tests when code is pushed to gitHub.</p>
-<p>There are some good resources if you’d like to dig deeper than this tutorial: * <a href="http://jtleek.com/protocols/travis_bioc_devel/">The Leek Lab Protocol</a> * <a href="https://juliasilge.com/blog/beginners-guide-to-travis/">Julia Silge’s Beginner’s Guide</a> * <a href="http://r-pkgs.had.co.nz/check.html">Hadley Wickham’s description</a> * <a href="https://docs.travis-ci.com/user/languages/r/">Travis R documentation</a></p>
+<p>There are some good resources if you’d like to dig deeper than this tutorial:</p>
+<ul>
+<li><a href="http://jtleek.com/protocols/travis_bioc_devel/">The Leek Lab Protocol</a></li>
+<li><a href="https://juliasilge.com/blog/beginners-guide-to-travis/">Julia Silge’s Beginner’s Guide</a></li>
+<li><a href="http://r-pkgs.had.co.nz/check.html">Hadley Wickham’s description</a></li>
+<li><a href="https://docs.travis-ci.com/user/languages/r/">Travis R documentation</a></li>
+</ul>
 <p>For this tutorial, I’ll use <code>devtools::use_travis()</code> to automatically add a minimal <code>.travis.yml</code> to the package, and to add <code>.travis.yml</code> to <code>.Rbuildignore</code>.</p>
 <pre><code>git checkout develop
 git checkout -b features/travis

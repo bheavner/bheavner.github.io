@@ -694,6 +694,7 @@ And the package can be installed from an R session with `devtools::install_githu
 An easy next step is to use [Travis](https://travis-ci.org/) to automatically run tests when code is pushed to gitHub.
 
 There are some good resources if you'd like to dig deeper than this tutorial:
+
 * [The Leek Lab Protocol](http://jtleek.com/protocols/travis_bioc_devel/)
 * [Julia Silge's Beginner's Guide](https://juliasilge.com/blog/beginners-guide-to-travis/)
 * [Hadley Wickham's description](http://r-pkgs.had.co.nz/check.html)
