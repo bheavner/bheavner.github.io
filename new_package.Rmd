@@ -640,7 +640,7 @@ git branch -d release/0.0.0.9001
 git push
 ```
 
-That's a complete cycle from 0 to package that people can use for something useful. The commit history on my *master* branch looks like this:
+Now the commit history on my *master* branch looks like this:
 ```
 git log --oneline --graph
 *   d115f0a Merge branch 'release/0.0.0.9001'
@@ -683,8 +683,61 @@ git log --oneline --graph
 * 7d45d66 First commit
 ```
 
+That's a complete cycle from 0 to package that people can use for something useful. 
+
 The repository is available as [a versioned release on gitHub](https://github.com/UW-GAC/genetable/releases). 
 
 And the package can be installed from an R session with `devtools::install_github("UW-GAC/genetable")`.
 
-An easy next step is to use [Travis](https://travis-ci.org/) to automatically run tests when code is pushed to gitHub. A harder step (that I don't have experience with yet) is inviting external collaborators to contribute to the package, and successfully integrating their code.
+## Automate Testing with Travis
+
+An easy next step is to use [Travis](https://travis-ci.org/) to automatically run tests when code is pushed to gitHub.
+
+There are some good resources if you'd like to dig deeper than this tutorial:
+* [The Leek Lab Protocol](http://jtleek.com/protocols/travis_bioc_devel/)
+* [Julia Silge's Beginner's Guide](https://juliasilge.com/blog/beginners-guide-to-travis/)
+* [Hadley Wickham's description](http://r-pkgs.had.co.nz/check.html)
+* [Travis R documentation](https://docs.travis-ci.com/user/languages/r/)
+
+For this tutorial, I'll use `devtools::use_travis()` to automatically add a minimal `.travis.yml` to the package, and to add `.travis.yml` to `.Rbuildignore`.
+
+```
+git checkout develop
+git checkout -b features/travis
+r
+> devtools::use_travis()
+* Creating `.travis.yml` from template.
+* Adding `.travis.yml` to `.Rbuildignore`.
+Next: 
+ * Add a travis shield to your README.md:
+[![Travis-CI Build Status](https://travis-ci.org/UW-GAC/genetable.svg?branch=master)](https://travis-ci.org/UW-GAC/genetable)
+ * Turn on travis for your repo at https://travis-ci.org/UW-GAC/genetable
+
+> q()
+```
+
+Then, follow the instructions from that `use_travis()` call to add the code for the badge by editing the package `README` to include the following at the beginning
+
+```
+[![Travis-CI Build Status](https://travis-ci.org/UW-GAC/genetable.svg?branch=master)](https://travis-ci.org/UW-GAC/genetable)
+```
+
+With that, we can run the normal checks then add our changes to the repository:
+
+```
+R
+> devtools::document()
+> devtools::lint()
+> devtools::test()
+> devtools::check()
+> q()
+git add .
+git commit
+git checkout develop
+git merge --no-ff features/travis
+git branch -d features/travis
+git push
+```
+
+## Start Collaborating
+A harder step (that I don't have experience with yet) is inviting external collaborators to contribute to the package, and successfully integrating their code. Learning about pull requests is on the todo list.

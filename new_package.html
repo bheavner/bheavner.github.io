@@ -637,7 +637,7 @@ git checkout develop
 git merge --no-ff release/0.0.0.9001
 git branch -d release/0.0.0.9001
 git push</code></pre>
-<p>That’s a complete cycle from 0 to package that people can use for something useful. The commit history on my <em>master</em> branch looks like this:</p>
+<p>Now the commit history on my <em>master</em> branch looks like this:</p>
 <pre><code>git log --oneline --graph
 *   d115f0a Merge branch 'release/0.0.0.9001'
 |\  
@@ -677,9 +677,46 @@ git push</code></pre>
 | * 2acc20a Add MIT License and package metadata in DESCRIPTION
 |/  
 * 7d45d66 First commit</code></pre>
+<p>That’s a complete cycle from 0 to package that people can use for something useful.</p>
 <p>The repository is available as <a href="https://github.com/UW-GAC/genetable/releases">a versioned release on gitHub</a>.</p>
 <p>And the package can be installed from an R session with <code>devtools::install_github(&quot;UW-GAC/genetable&quot;)</code>.</p>
-<p>An easy next step is to use <a href="https://travis-ci.org/">Travis</a> to automatically run tests when code is pushed to gitHub. A harder step (that I don’t have experience with yet) is inviting external collaborators to contribute to the package, and successfully integrating their code.</p>
+</div>
+<div id="automate-testing-with-travis" class="section level2">
+<h2>Automate Testing with Travis</h2>
+<p>An easy next step is to use <a href="https://travis-ci.org/">Travis</a> to automatically run tests when code is pushed to gitHub.</p>
+<p>There are some good resources if you’d like to dig deeper than this tutorial: * <a href="http://jtleek.com/protocols/travis_bioc_devel/">The Leek Lab Protocol</a> * <a href="https://juliasilge.com/blog/beginners-guide-to-travis/">Julia Silge’s Beginner’s Guide</a> * <a href="http://r-pkgs.had.co.nz/check.html">Hadley Wickham’s description</a> * <a href="https://docs.travis-ci.com/user/languages/r/">Travis R documentation</a></p>
+<p>For this tutorial, I’ll use <code>devtools::use_travis()</code> to automatically add a minimal <code>.travis.yml</code> to the package, and to add <code>.travis.yml</code> to <code>.Rbuildignore</code>.</p>
+<pre><code>git checkout develop
+git checkout -b features/travis
+r
+&gt; devtools::use_travis()
+* Creating `.travis.yml` from template.
+* Adding `.travis.yml` to `.Rbuildignore`.
+Next: 
+ * Add a travis shield to your README.md:
+[![Travis-CI Build Status](https://travis-ci.org/UW-GAC/genetable.svg?branch=master)](https://travis-ci.org/UW-GAC/genetable)
+ * Turn on travis for your repo at https://travis-ci.org/UW-GAC/genetable
+
+&gt; q()</code></pre>
+<p>Then, follow the instructions from that <code>use_travis()</code> call to add the code for the badge by editing the package <code>README</code> to include the following at the beginning</p>
+<pre><code>[![Travis-CI Build Status](https://travis-ci.org/UW-GAC/genetable.svg?branch=master)](https://travis-ci.org/UW-GAC/genetable)</code></pre>
+<p>With that, we can run the normal checks then add our changes to the repository:</p>
+<pre><code>R
+&gt; devtools::document()
+&gt; devtools::lint()
+&gt; devtools::test()
+&gt; devtools::check()
+&gt; q()
+git add .
+git commit
+git checkout develop
+git merge --no-ff features/travis
+git branch -d features/travis
+git push</code></pre>
+</div>
+<div id="start-collaborating" class="section level2">
+<h2>Start Collaborating</h2>
+<p>A harder step (that I don’t have experience with yet) is inviting external collaborators to contribute to the package, and successfully integrating their code. Learning about pull requests is on the todo list.</p>
 </div>
 
 
@@ -707,7 +744,7 @@ $(document).ready(function () {
   (function () {
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
     document.getElementsByTagName("head")[0].appendChild(script);
   })();
 </script>
