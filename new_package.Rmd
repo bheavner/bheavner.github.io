@@ -740,5 +740,12 @@ git branch -d features/travis
 git push
 ```
 
+## Include code coverage metrics on github
+
+The best instructions I've found are from [Eryk Walczak](https://walczak.org/2017/06/how-to-add-code-coverage-codecov-to-your-r-package/).
+Note particularly that you have to copy the token to wherever you're pushing
+your commits from.
+
+
 ## Start Collaborating
 A harder step (that I don't have experience with yet) is inviting external collaborators to contribute to the package, and successfully integrating their code. Learning about pull requests is on the todo list.
