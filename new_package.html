@@ -722,7 +722,13 @@ git push</code></pre>
 </div>
 <div id="include-code-coverage-metrics-on-github" class="section level2">
 <h2>Include code coverage metrics on github</h2>
-<p>The best instructions I’ve found are from <a href="https://walczak.org/2017/06/how-to-add-code-coverage-codecov-to-your-r-package/">Eryk Walczak</a>. Note particularly that you have to copy the token to wherever you’re pushing your commits from.</p>
+<p><a href="https://walczak.org/2017/06/how-to-add-code-coverage-codecov-to-your-r-package/">Eryk Walczak</a>. has good instruction for situations where you’re pushing to github and manually uploading coverage reports. Note particularly that you have to copy the token to wherever you’re pushing your commits from.</p>
+<p>On the other hand, if you want travis to just run and upload reports automagically, you don’t have to copy the token but can follow the instructions here: <a href="https://github.com/codecov/example-r" class="uri">https://github.com/codecov/example-r</a> and just add this to your <code>.travis.yml</code> file:</p>
+<pre><code>r_packages:
+  - covr
+
+after_success:
+  - Rscript -e 'library(covr); codecov()'</code></pre>
 </div>
 <div id="start-collaborating" class="section level2">
 <h2>Start Collaborating</h2>
