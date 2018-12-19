@@ -141,43 +141,72 @@ bar <- "b2"
 dplyr::filter(toy, feature2 == bar)
 ```
 
+This can cause some ambiguity, though. Suppose that I chose a symbol for my global variable that also existed in my tibble, like this:
+```{r}
+feature2 <- "b2"
+dplyr::filter(toy, feature2 == feature2)
+```
 
-However, as Ian demonstrates in [the second section](https://ijlyttle.shinyapps.io/tidyeval/#section-what-motivates-tidyeval) of his tutorial, something perhaps unexpected or undesired happens if I use a symbol from the global environment for the first argument to the `` `==` `` expression within the `filter()` call:
+Since my symbol exists in the tibble, that's the environment where `filter()` finds it, following the binding to the value `c("a2", "b2", "c2")`.
+
+Fortunately, `rlang` provides a tool to get us out of this problem - the `!!` operator, or the `UQ()` function. Per the documentation, "the !! operator ... gets evaluated immediately in the surrounding context." That is, the `!!` operator lets us evaluate the `feature2` symbol using the calling context (the global environment), not the dplyr context of the tibble:
+```{r}
+feature2 <- "b2"
+dplyr::filter(toy, feature2 == !!feature2)
+```
+
+Rlang provides another useful function, `quo()`. Among other things, `quo()` applies the `!!` operator and lets us see what is being used for the function call, like this:
+```{r}
+feature2 <- "b2"
+quo(dplyr::filter(toy, feature2 == !!feature2))
+```
+
+So, in that case, we can see that `!!feature2` is being evaluated to it's bound value of `"b2"` in the global environment.
+
+Lest we get too satisfied with our progress, there's another issue, as Ian demonstrates in [the second section](https://ijlyttle.shinyapps.io/tidyeval/#section-what-motivates-tidyeval) of his tutorial. This issue is that something perhaps unexpected or undesired happens if I use a symbol from the global environment for the first argument to the `` `==` `` expression within the `filter()` call:
 
 ```{r}
 my_var <- "feature2"
 dplyr::filter(toy, my_var == "b2")
 ```
 
-In this case, the second argument is evaluated to
-```
-`==`("feature2","b2")
-```
+In this case, the second argument, `my_var == "b2"` is evaluated to `` `==`("feature2","b2")``
 which in turn evaluates to `FALSE`, so the `filter()` call becomes:
-```
-dplyr::filter(toy, FALSE)
-```
+`dplyr::filter(toy, FALSE)`. 
 
-That this is different from what I'd like:
-```
-`==`(feature2,"b2")
-```
+Clearly, this is different from what I'd like it the second argument to evaluate to, `` `==`(feature2,"b2")``, which would lead to my desired `dplyr::filter(toy, c(FALSE, TRUE, FALSE))`.
 
-That is, what's happening is that the symbol `my_var` is being replaced with it's value in the global environment, the string `"feature2"`, and not with a new symbol, `feature2`, that would subsequently be found in the calling envirionment.
+What's happening is that the symbol `my_var` is being replaced with it's value in the global environment, the string `"feature2"`. It is not being replaced with the symbol `feature2`, which I would like to have subsequently evaluated in the calling envirionment of the tibble.
 
-If I try to give an unquoted string as a symbol, then I get an error:
+There's a few ideas of possible fixed that don't work: if I try to give an unquoted string as a symbol, then I get an error:
 ```{r, error = TRUE}
 my_var <- feature2
 dplyr::filter(toy, my_var == "b2")
 ```
 
-It doesn't even work if I specify that `feature2` is a name:
+if I specify that `feature2` is a name, the `==` argument simply evaluates to FALSE, and no rows are returned from `filter()`:
 ```{r}
 my_var <- as.name("feature2")
 dplyr::filter(toy, my_var == "b2")
+my_var == "b2"
 ```
 
-Clearly, we'll need to do something different (that's foreshadowing)! But before we resolve the dramatic tension, perhaps it's time for a little detour into another confusing issue - `is.name()`...
+Clearly, we'll need to do something different! (that's foreshadowing!) We need to evaluate the symbol in the calling context using `!!`:
+```{r}
+my_var <- as.name("feature2")
+dplyr::filter(toy, !!my_var == "b2")
+```
+
+Inspecting with `quo()`, we can see that the expression becomes what we were shooting for:
+```{r}
+quo(dplyr::filter(toy, !!my_var == "b2"))
+```
+
+There's something confusing going on here: using `!!` on the first argument of `` `==`(!!my_var, "b2") `` seems to end up evaluating to a symbol in the context of the data frame, but using `!!` on the second argument as we did when we introduced `!!` with `` `==`(feature2, !!feature2)`` seems to evaluate to a string that was bound to the symbol in the global namespace.
+
+In fact, when we used `!!` with the first argument, the symbol in the global namespace was itself bound to a symbol (a symbol that isn't necessarly defined in the global namespace!). When we used `!!` with the second argument, the symbol in the global namespace was bound to a string, so the difference isn't in the placement of the `!!` in the `==` function arguments, but rather in what the symbol in the global namespace is bound to.
+
+This may still be confusing. I am still confused, and I just wrote it. But before we fully resolve the dramatic tension surrounding the evaluation of a `sym()`, perhaps it will be useful to take time for a little detour into the confusing issue of what a variable symbol or name is, whether those ar different things, and how they relate to ideas like "environments" and "lexical scoping"...
 
 ## Prerequisites: Variables, names and symbols
 
@@ -229,4 +258,22 @@ is.name(as.name(toy$feature1)) # TRUE
 
 This could be a good starting point for deeper exploration and confusion (or understanding?), but I'll leave the topic there for now. It's time to return to our problem of passing a symbol that is a name of a variable in a tibble from the global environment to a `filter()` call.
 
-## Turning a string into a symbol: rlang::sym()
+### returning to the second argument
+With that detour and context, we can revisit our question, which boils down to: what is the difference in the way `!!` works on the left and right sides of `==` in the second argument of the `filter()` call in this case:
+```{r}
+my_var <- sym("feature2")
+my_value <- "b2"
+
+filter(toy, !!my_var == !!my_value)
+```
+
+Hopefully, your understanding has evolved as mine has as I've written this, and now we can come to a reasonable answer: `!!` is behaving the same in both cases - it is evaluating the subsequent symbol in the global context to make an expression to be evaluated for the filter call. I percieve this as a multi-step process, something like this:
+```
+filter(toy, !!my_var == !!my_value)
+filter(toy, sym("feature2") == "b2")
+filter(toy, feature2 == "b2")
+filter(toy, toy$feature2 == "b2") # because feature2 is a symbol in the tibble
+filter(toy, c(FALSE, TRUE, FALSE))
+```
+
+Now we've got a choice: work on selecty expressions, or continue with filtering to make functions... I think continue with this..
