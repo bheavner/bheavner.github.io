@@ -1,0 +1,232 @@
+---
+title: "Struggling With NSE"
+author: "Ben Heavner"
+date: "12/17/2018"
+output: 
+  html_document: # see here for docs: http://rmarkdown.rstudio.com/html_document_format.html
+    toc: true # table of content true
+    toc_float: true # floating TOC
+    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    theme: united  # many options for theme - see http://bootswatch.com/
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+[Ian Lyttle](https://twitter.com/ijlyttle) once wrote "for years, I have struggled to wrap my head around non-standard evaluation". His solution was to write a [tidyeval tutorial](https://ijlyttle.shinyapps.io/tidyeval/#section-what-motivates-tidyeval). It's a very good tutorial. It even got [enddorsed by Hadley](https://twitter.com/hadleywickham/status/1060875708271157248).
+
+I think I *kinda* get it, but, well, for years, I have struggled to wrap my head around non-standard evaluation, so perhaps it will be a useful learning tool me as well to write another tutorial, this time derived from [Ian's work](https://ijlyttle.shinyapps.io/tidyeval/#section-what-motivates-tidyeval)... 
+
+**Caution**: I'm not confident that I've mastered the ideas of environments and lexical scoping in R, which are essential for understanding nonstandard evaluation, so it's very likely that my confusion will manifest itself here... I'm also not confident in my use of specific computer science jargon... But, I think it's worthwhile to struggle through this to learn about how functions work, and how better to learn than to make mistakes?
+
+## Dissecting a filter() call
+
+I think that much of my NSE confusion may arise from not being clear in my thinking or understanding of CS terminology and what is really happening during function call execution, so I'll start working on Ian's tutorial a little bit out of order and begin I'll begin by attempting to dissect the first example from the fourth section, [Using functions that use tidyeval](https://ijlyttle.shinyapps.io/tidyeval/#section-using-functions-that-use-tidyeval).
+
+I'll start with a toy tibble for the purposes of this tutorial:
+
+```{r, message = FALSE}
+library(dplyr)
+
+toy <- tibble(
+  feature1 = c("a1", "b1", "c1"),
+  feature2 = c("a2", "b2", "c2")
+)
+```
+
+This tibble, `toy`, consists of three observations of two variables (or features). In this case, the variables/features of the tibble are named `feature1` and `feature2`.
+
+### the call
+
+Ian's example uses a call to `filter()`. For example, if I want to create a tibble that consists of all the observations for which `feature2` is `b2`, I'd do this:
+
+```{r}
+dplyr::filter(toy, feature2 == "b2")
+```
+
+Roughly, here's how I *think* the above function call maps to some of the ideas in Ian's third section, on [Principles and concepts](https://ijlyttle.shinyapps.io/tidyeval/#section-principles-and-concepts) (and I'll go into this section more below): this function call is an **expression**. A little more specifically, I think this function call is a compound expression, because the second argument, `feature2 == "b2"` is itself an expression, which can be rewritten as the function call `` `==`(feature2, "b2") ``. (I wouldn't ever actually call `==` this way, but perhaps writing it with this syntax makes it a bit more clear that this argument is a function call/expression itself - an expression that needs to be **evaluated** to return a value that provides the second argument to filter().
+
+An expression can be **evaluated** to return a **value**. The way the expression is evaluated is defined as "standard evaluation" or "nonstandard evaluation". One place evaluation is described is at: <https://developer.r-project.org/nonstandard-eval.pdf>.
+
+An expression is built from **symbols**. If you've read the [Advanced R chapter on Environments](http://adv-r.had.co.nz/Environments.html), you may recall that an environment binds a variable name (or "symbol") to a value. As I understand it, "evaluation" is the process by which R follows the rules of lexical scoping to obtain the values bound to variable names, and executing the operations defined on those values by functions to return a final value as the function is executed.
+
+In functions that use tidyeval (or other NSE) semantics, different arguments may be evaluated in different ways.
+
+It is not clear to me whether the process of obtaining a value from a variable name that is bound to that value is considered evaluation or not; however, I will plough ahead with trying to undertsand the above `filter()` call despite my confusion on some of these specifics.
+
+### the first argument
+
+Breaking it down, the first argument to the above `filter()` call is `toy`, the name bound to the tibble I defined above in the global environment. Note that `toy` is specified with an unquoted string of characters, so in this case, I think that `toy` is a symbol - the name of a variable bound to the object in the global environment. 
+
+I think that `filter()` follows the normal rules of lexical scoping and looks for the `toy` variable in the calling context. In this case, the calling context is the environment of the function, which we can check:
+```{r}
+environment(filter)
+```
+
+The name 'toy' doesn't exist in the dplyr namespace:
+```{r}
+"toy" %in% ls(envir = as.environment("package:dplyr"))
+```
+
+so R looks to the parent environment, in this case the global environment, for the variable name. Once it finds the variable, it operates on the `toy` object.
+
+(Perhaps it's more accurate to say the first argument is `.data = toy`, and that `.data` is a name in the dplyr environment; however, even in that case, `toy` is a symbol in the global namespace, so as the `=` assignment operator is evaluated, it has to find the object that the symbol `toy` is bound to... so... I'll just go with the above explanation and save some of my confusion for later. But I do think the more accurate view may provide useful insight to how NSE makes symbols available for evaluation, so perhaps I'll circle back.)
+
+### the second argument
+
+The second argument to the above `filter()` call is `feature2 == "b2"`. This argument is itself an expression composed of a few symbols, so I'll break it down a bit more. It's worth stepping into this second argument expression as we consider the outer `filter()` call. In this second argument, the function is the base R equality operator, `` `==` ``.
+
+The `==` operator uses a bit of syntactic sugar when written in this expression with this syntax that gives the function name in between the function arguments. The expression can also be written with a more familiar function syntax that has the arguments in parantheses after the function name, like this: `` `==`(feature2, "b2") ``. (Again, I would usually use the syntactic sugar for the `==` function, but I'm using it here for pedagological reasons.)
+
+The first argument to `==` is an unquoted string (a symbol?), `feature2`. The second argument is the quoted string `"b2"`. 
+
+So, to evaluate this expression using standard evaluation, I'd guess that that R would begin by looking in the calling environment for the symbol `feature2`. However, the symbol `feature2` doesn't exist in the global namespace. This is may be the point where some NSE magic gets introduced, because (I think) the calling environment is the the temporary environment created by the `filter` function itself.
+
+I'm not sure the best way to explore the environments within `filter()`, so in the meantime, I made a little function to dig into it and poke around a bit more, like this:
+```{r}
+digIn <- function(){
+  toy <- tibble(
+    feature1 = c("a1", "b1", "c1"),
+    feature2 = c("a2", "b2", "c2")
+  )
+  browser()
+  dplyr::filter(toy, feature2 == "b2")
+}
+```
+
+Then I called that function with `digIn()` and stepped into the code again and again (I'm not sure how to do this in knitter, so you'll have to take my word for it or do it yourself). I found a couple interesting clues. The second argument eventually gets changed to a variable called `quo` that looks like this:
+```
+<quosure>
+expr: ^feature2 == "b2"
+env:  0x10936ac48
+```
+
+and then filter gets called with this:
+```
+filter_impl(.data, quo)
+```
+
+We will be coming back to this `quo` buisness later... for now, let's just proceed with looking at this second argument and investigating what it does.
+
+In the [fourth section of his tutorial](https://ijlyttle.shinyapps.io/tidyeval/#section-tidyeval-and-tidyverse), Ian reminds us that "One of the mantras of the tidyverse is "data first!", and suggests this may extend even to help thinking about which environment might contain variable symbols and values within tidyverse functions: "when a tidyverse function evaluates an expression, it looks in the data first, then in the calling context".
+
+So, let's take that as an article of faith - in this case, `filter()` looks for the symbol `feature2` as a feature/column name in the tibble `toy`. Then, it would use the values bound to that symbol in evaluating the expression that makes the second argument, and this expression `` `==`(feature2, "b2") `` might look like this for evaluation:
+
+```{r}
+`==`(c("a2", "b2", "c2"), "b2")
+```
+
+The value returned by that evaluation is what's used for the second argument to `filter()`, so now the `filter()` call becomes something like:
+```{r}
+dplyr::filter(toy, c(FALSE, TRUE, FALSE))
+```
+
+
+This understanding that the usual rules of lexical scoping (that is, that evaluation involves looking for a symbol in the data, then calling context, then global environment) seem to apply in this case is supported if I define this logical vector in the global environment. 
+
+If the symbol bound to a logical vector isn't in the the function, R looks at the parent environment:
+
+```{r}
+foo <- c(FALSE, TRUE, FALSE) # defined in global environment
+dplyr::filter(toy, foo)
+```
+
+I can also use a symbol from the global environment for the second argument to the `` `==` `` expression within the `filter()` call:
+```{r}
+bar <- "b2"
+dplyr::filter(toy, feature2 == bar)
+```
+
+
+However, as Ian demonstrates in [the second section](https://ijlyttle.shinyapps.io/tidyeval/#section-what-motivates-tidyeval) of his tutorial, something perhaps unexpected or undesired happens if I use a symbol from the global environment for the first argument to the `` `==` `` expression within the `filter()` call:
+
+```{r}
+my_var <- "feature2"
+dplyr::filter(toy, my_var == "b2")
+```
+
+In this case, the second argument is evaluated to
+```
+`==`("feature2","b2")
+```
+which in turn evaluates to `FALSE`, so the `filter()` call becomes:
+```
+dplyr::filter(toy, FALSE)
+```
+
+That this is different from what I'd like:
+```
+`==`(feature2,"b2")
+```
+
+That is, what's happening is that the symbol `my_var` is being replaced with it's value in the global environment, the string `"feature2"`, and not with a new symbol, `feature2`, that would subsequently be found in the calling envirionment.
+
+If I try to give an unquoted string as a symbol, then I get an error:
+```{r, error = TRUE}
+my_var <- feature2
+dplyr::filter(toy, my_var == "b2")
+```
+
+It doesn't even work if I specify that `feature2` is a name:
+```{r}
+my_var <- as.name("feature2")
+dplyr::filter(toy, my_var == "b2")
+```
+
+Clearly, we'll need to do something different (that's foreshadowing)! But before we resolve the dramatic tension, perhaps it's time for a little detour into another confusing issue - `is.name()`...
+
+## Prerequisites: Variables, names and symbols
+
+This is a background section that kinda corresponds to and arises from Ian's third section, on [Principles and concepts](https://ijlyttle.shinyapps.io/tidyeval/#section-principles-and-concepts).
+
+At times, I've been confused about the difference (if any) between a varible name and a variable symbol. Documentation for `?is.name` and `?is.symbol` both point to the same file, which suggests they're equivalent by starting with "A ‘name’ (also known as a ‘symbol’) ...". The documentation also says that the word "symbol" derives from R's roots in LISP, and the word "name comes from S, suggesting the existence of both is just a historical legacy. So it seems that they're the same thing.
+
+There's a very good [stackoverflow question](https://stackoverflow.com/questions/25235240/r-variable-names-symbols-names-or-something-else) about the issue (with a great answer by the always-insighful [MrFlick](https://stackoverflow.com/users/2372064/mrflick)). 
+
+As a reference, the [Advanced R chapter on Environments](http://adv-r.had.co.nz/Environments.html) describes how an environment binds a variable name to a value - that may be useful here, too. 
+
+From MrFlick's answer, I learn that `is.name()` is a base R function that uses the rules of lexical scoping to look for the variable name given in the argument. Confusingly for me, if the variable name doesn't exist in the hierarchy of environments that are searched, `is.name()` returns an error (and `is.symbol()` behaves the same). I would have expected it to return FALSE, but that's not how it works:
+
+```{r, error = TRUE}
+rm(foo) # make sure it doesn't exist
+is.name(foo)
+```
+
+Instead, `is.name()` and `is.symbol()` return FALSE if the variable name does exist and is bound to a value, :
+```{r}
+foo <- "waa!"
+is.name(foo)
+```
+
+As I understand, this is because is.name is looking up the **value** bound to the name `foo` - in this case, it's the character string `waa!`:
+```{r}
+is.character(foo)
+foo
+```
+
+If we want to use the variable name (or symbol) in R, and not the value it is bound to, there are a few things that seem to work: the base R `quote()`, the base R `as.name()`, and the rlang `sym()`. This isn't something that we normally have to do, but will be doing later on in this tutorial for the purposes of nonstandard evaluation:
+
+```{r}
+is.character(quote(foo))
+is.name(quote(foo))
+is.name(as.name(foo))
+is.name(dplyr::sym(foo))
+```
+
+These functions appear to differ in that `as.name()` uses `.Internal(as.vector(x, "symbol"))`, `quote()` is a primitive, and `sym()` operates only on strings. I freely admit that I don't really understand those differences, but it could be useful to know that they behave differently if I'm trying to work with the names of columns/variables within a tibble:
+
+```{r, error = TRUE}
+is.character(toy$feature1) # TRUE
+is.name(toy$feature1) # as expected, FALSE
+is.name(dplyr::sym(toy$feature1)) # perhaps surprising, error - only strings can be converted
+is.name(quote(toy$feature1)) # FALSE - not sure why
+is.name(as.name(toy$feature1)) # TRUE
+```
+
+This could be a good starting point for deeper exploration and confusion (or understanding?), but I'll leave the topic there for now. It's time to return to our problem of passing a symbol that is a name of a variable in a tibble from the global environment to a `filter()` call.
+
+## Turning a string into a symbol: rlang::sym()
